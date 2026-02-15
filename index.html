@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Report Analysis</title>
+    <style>
+        :root {
+            --primary: #0ea5e9; /* Medical Blue */
+            --primary-dark: #0284c7;
+            --secondary: #64748b;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --success: #22c55e;
+            --warning: #eab308;
+            --danger: #ef4444;
+            --border: #e2e8f0;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding-bottom: 4rem;
+        }
+
+        /* --- Layout --- */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo span {
+            color: var(--text-main);
+        }
+
+        /* --- Main Section --- */
+        .hero {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+        }
+
+        .hero p {
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* --- Upload Area --- */
+        .upload-section {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 3rem;
+            text-align: center;
+            border: 2px dashed var(--border);
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+            cursor: pointer;
+        }
+
+        .upload-section:hover, .upload-section.drag-over {
+            border-color: var(--primary);
+            background-color: #f0f9ff;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 1rem;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            margin-left: 0.5rem;
+        }
+
+        .btn-outline:hover {
+            background-color: #f0f9ff;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* --- Processing Visualization --- */
+        .processing-stage {
+            display: none; /* Hidden by default */
+            background: var(--surface);
+            padding: 2rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .progress-bar-container {
+            height: 8px;
+            background: var(--bg);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .step-log {
+            font-family: monospace;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            height: 100px;
+            overflow-y: auto;
+            background: var(--bg);
+            padding: 1rem;
+            border-radius: 6px;
+        }
+
+        .log-entry {
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .log-entry.done { color: var(--success); }
+        .log-entry.active { color: var(--primary); font-weight: bold; }
+
+        /* --- Results Area --- */
+        .results-section {
+            display: none; /* Hidden by default */
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .test-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .test-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .test-card.normal::before { background-color: var(--success); }
+        .test-card.high::before { background-color: var(--danger); }
+        .test-card.low::before { background-color: var(--warning); }
+
+        .test-name {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .test-value-group {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .test-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .test-unit {
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+
+        .test-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-normal { background: #dcfce7; color: #166534; }
+        .status-high { background: #fee2e2; color: #991b1b; }
+        .status-low { background: #fef9c3; color: #854d0e; }
+
+        .test-range {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 1rem;
+            border-top: 1px solid var(--border);
+            padding-top: 0.75rem;
+        }
+
+        /* --- Utilities --- */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container header-content">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+                HealthAI <span>Analyzer</span>
+            </div>
+            <!-- Milestone text removed here -->
+        </div>
+    </header>
+
+    <main class="container">
+        
+        <section class="hero">
+            <h1>Intelligent Blood Report Analysis</h1>
+            <p>Upload your health report (JSON format) to extract parameters, validate data, and identify abnormal levels using our classification engine.</p>
+        </section>
+
+        <!-- Input Interface -->
+        <section id="uploadArea" class="upload-section">
+            <div class="upload-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+            </div>
+            <h3>Drag & Drop JSON Report</h3>
+            <p style="margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+                Supports structured JSON data containing blood parameters.
+            </p>
+            <input type="file" id="fileInput" accept=".json">
+            <button class="btn" onclick="document.getElementById('fileInput').click()">Select File</button>
+            <button class="btn btn-outline" id="sampleBtn">Load Sample Report</button>
+        </section>
+
+        <!-- Data Extraction & Processing Visualization -->
+        <section id="processingStage" class="processing-stage">
+            <h3 style="margin-bottom: 1rem;">Processing Pipeline</h3>
+            <div class="progress-bar-container">
+                <div id="progressBar" class="progress-bar"></div>
+            </div>
+            <div id="stepLog" class="step-log">
+                <!-- Logs will appear here -->
+            </div>
+        </section>
+
+        <!-- Results Dashboard -->
+        <section id="resultsSection" class="results-section">
+            <div class="results-header">
+                <h2>Analysis Results</h2>
+                <div style="text-align: right;">
+                    <small style="display:block; color: var(--text-muted);">Classification Accuracy</small>
+                    <strong style="color: var(--success);">98.5% (Simulated)</strong>
+                </div>
+            </div>
+            
+            <div id="cardsContainer" class="card-grid">
+                <!-- Cards injected via JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        /**
+         * IMPLEMENTATION
+         * 1. Reference Ranges (Model 1 Logic)
+         * 2. Parser & Extraction Engine
+         * 3. Validation & Standardization
+         * 4. UI Controller
+         */
+
+        // --- 1. Model 1: Parameter Interpretation (Reference Ranges) ---
+        // Standard medical reference ranges (Default: Adult)
+        const REFERENCE_RANGES = {
+            "Hemoglobin": { min: 13.5, max: 17.5, unit: "g/dL", standardUnit: "g/dL" },
+            "Blood Glucose (Fasting)": { min: 70, max: 99, unit: "mg/dL", standardUnit: "mg/dL" },
+            "Total Cholesterol": { min: 0, max: 199, unit: "mg/dL", standardUnit: "mg/dL" },
+            "Platelet Count": { min: 150000, max: 450000, unit: "/mcL", standardUnit: "/mcL" },
+            "WBC Count": { min: 4500, max: 11000, unit: "/mcL", standardUnit: "/mcL" },
+            "Hematocrit": { min: 38.8, max: 50.0, unit: "%", standardUnit: "%" }
+        };
+
+        // Unit Conversion Factors (Standardization Module)
+        const CONVERSIONS = {
+            "Blood Glucose (Fasting)": {
+                "mmol/L": 18.018, // multiply mmol/L by 18.018 to get mg/dL
+                "mg/dL": 1
+            }
+        };
+
+        // --- 2. Application Logic ---
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const processingStage = document.getElementById('processingStage');
+        const resultsSection = document.getElementById('resultsSection');
+        const stepLog = document.getElementById('stepLog');
+        const progressBar = document.getElementById('progressBar');
+        const cardsContainer = document.getElementById('cardsContainer');
+        const sampleBtn = document.getElementById('sampleBtn');
+
+        // Drag and Drop Event Listeners
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        sampleBtn.addEventListener('click', () => {
+            const sampleData = generateSampleData();
+            processReportData(sampleData);
+        });
+
+        function handleFile(file) {
+            if (file.type !== "application/json" && !file.name.endsWith('.json')) {
+                alert("Please upload a valid JSON file.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    processReportData(json);
+                } catch (err) {
+                    alert("Error parsing JSON file. Please check the format.");
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- Core Pipeline Functions ---
+
+        async function processReportData(data) {
+            // Reset UI
+            uploadArea.classList.add('hidden');
+            processingStage.style.display = 'block';
+            resultsSection.style.display = 'none';
+            stepLog.innerHTML = '';
+            progressBar.style.width = '0%';
+            cardsContainer.innerHTML = '';
+
+            // Step 1: Input Reception & Parsing
+            await logStep("Receiving input data...", 10);
+            await delay(600);
+            
+            // Step 2: Data Extraction Engine
+            await logStep("Starting Data Extraction Engine...", 30);
+            const extractedParams = extractParameters(data);
+            await logStep(`Extracted ${extractedParams.length} parameters.`, 50);
+            await delay(800);
+
+            // Step 3: Validation & Standardization
+            await logStep("Validating data & standardizing units...", 70);
+            const standardizedData = standardizeData(extractedParams);
+            
+            // Step 4: Model 1 Classification
+            await logStep("Running Model 1: Parameter Interpretation...", 90);
+            const results = classifyParameters(standardizedData);
+            await delay(600);
+
+            // Finish
+            await logStep("Analysis Complete. Generating Report.", 100);
+            await delay(500);
+
+            // Render Results
+            renderResults(results);
+            processingStage.style.display = 'none';
+            resultsSection.style.display = 'block';
+            uploadArea.classList.remove('hidden'); // Allow new upload
+        }
+
+        // --- Engine: Extractor ---
+        // Recursively scans JSON for keys that match our known parameters
+        function extractParameters(data) {
+            let found = [];
+            
+            function traverse(obj) {
+                for (let key in obj) {
+                    // Check if key matches a known parameter (fuzzy match or exact)
+                    // We normalize keys to lower case for matching
+                    const normalizedKey = key.toLowerCase().trim();
+                    const matchedParamKey = Object.keys(REFERENCE_RANGES).find(k => k.toLowerCase().includes(normalizedKey) || normalizedKey.includes(k.toLowerCase().split(' ')[0]));
+
+                    if (matchedParamKey && obj[key]) {
+                        let value = obj[key];
+                        let unit = ""; // Try to find unit nearby or default
+                        
+                        // Handle case where value is an object { value: 100, unit: "mg/dL" }
+                        if (typeof value === 'object' && value !== null) {
+                            if (value.value) value = parseFloat(value.value);
+                            if (value.unit) unit = value.unit;
+                        } else {
+                            value = parseFloat(value);
+                        }
+
+                        if (!isNaN(value)) {
+                            found.push({
+                                name: matchedParamKey,
+                                originalKey: key,
+                                value: value,
+                                unit: unit || "unknown" 
+                            });
+                        }
+                    } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+                        traverse(obj[key]);
+                    }
+                }
+            }
+            
+            traverse(data);
+            return found;
+        }
+
+        // --- Engine: Validation & Standardization ---
+        function standardizeData(params) {
+            return params.map(p => {
+                const ref = REFERENCE_RANGES[p.name];
+                let finalValue = p.value;
+                let finalUnit = p.unit;
+
+                // If we have conversion rules for this parameter
+                if (ref && CONVERSIONS[p.name] && CONVERSIONS[p.name][p.unit]) {
+                    const factor = CONVERSIONS[p.name][p.unit];
+                    finalValue = p.value * factor;
+                    finalUnit = ref.standardUnit; // Update unit to standard
+                }
+
+                return {
+                    ...p,
+                    standardizedValue: parseFloat(finalValue.toFixed(2)),
+                    standardizedUnit: finalUnit
+                };
+            });
+        }
+
+        // --- Engine: Model 1 (Classification) ---
+        function classifyParameters(params) {
+            return params.map(p => {
+                const ref = REFERENCE_RANGES[p.name];
+                let status = 'normal'; // default
+                let flag = '';
+
+                if (ref) {
+                    if (p.standardizedValue < ref.min) {
+                        status = 'low';
+                        flag = 'L';
+                    } else if (p.standardizedValue > ref.max) {
+                        status = 'high';
+                        flag = 'H';
+                    }
+                } else {
+                    status = 'unknown';
+                }
+
+                return {
+                    ...p,
+                    status: status,
+                    referenceRange: ref ? `${ref.min} - ${ref.max} ${ref.unit}` : 'Not defined',
+                    flag: flag
+                };
+            });
+        }
+
+        // --- UI Rendering ---
+        function renderResults(results) {
+            if (results.length === 0) {
+                cardsContainer.innerHTML = '<p>No recognizable blood parameters found in the report.</p>';
+                return;
+            }
+
+            results.forEach(item => {
+                const card = document.createElement('div');
+                card.className = `test-card ${item.status}`;
+                
+                // Status label styling
+                let statusLabel = item.status.toUpperCase();
+                let statusClass = `status-${item.status}`;
+
+                card.innerHTML = `
+                    <div class="test-name">${item.name}</div>
+                    <div class="test-value-group">
+                        <span class="test-value">${item.standardizedValue}</span>
+                        <span class="test-unit">${item.standardizedUnit}</span>
+                    </div>
+                    <span class="test-status ${statusClass}">${statusLabel}</span>
+                    <div class="test-range">
+                        Ref: ${item.referenceRange}
+                    </div>
+                `;
+                cardsContainer.appendChild(card);
+            });
+        }
+
+        // --- Helper Functions ---
+
+        function logStep(message, progressPercent) {
+            return new Promise(resolve => {
+                const entry = document.createElement('div');
+                entry.className = 'log-entry active';
+                entry.innerHTML = `> ${message}`;
+                stepLog.appendChild(entry);
+                
+                // Scroll to bottom
+                stepLog.scrollTop = stepLog.scrollHeight;
+
+                progressBar.style.width = `${progressPercent}%`;
+
+                // Mark previous as done
+                const prev = entry.previousElementSibling;
+                if (prev) prev.classList.add('done');
+
+                setTimeout(resolve, 100);
+            });
+        }
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // --- Sample Data Generator ---
+        function generateSampleData() {
+            return {
+                "patient_id": "12345",
+                "report_date": "2023-10-27",
+                "results": {
+                    "cbc": {
+                        "Hemoglobin": 14.5, // Normal
+                        "Hematocrit": 42.0, // Normal
+                        "WBC Count": 12500, // High
+                        "Platelet Count": 140000 // Low
+                    },
+                    "metabolic": {
+                        "Blood Glucose (Fasting)": {
+                            "value": 5.5,
+                            "unit": "mmol/L" // Will be converted to mg/dL (approx 99)
+                        },
+                        "Total Cholesterol": 245 // High
+                    }
+                }
+            };
+        }
+
+    </script>
+</body>
+</html>
